@@ -3,9 +3,7 @@ Real-time wake word detection from microphone input.
 """
 
 import time
-import sys
 import argparse
-import numpy as np
 import sounddevice as sd
 from threading import Thread, Event
 import config
@@ -72,12 +70,11 @@ def run_detection(args):
                 audio_window = audio_buffer.get_window()
 
                 # Process audio for wake word
-                if detector.process_audio(audio_window):
-                    print(f"\n🔊 Wake word '{config.WAKEWORD}' detected! 🔊\n")
-                    # Here you would trigger your application logic after wake word detection
+                detector.process_audio(audio_window)
+
 
                 # Sleep to avoid excessive CPU usage
-                time.sleep(config.HOP_LENGTH_MS / 1000)
+                time.sleep(config.HOP_LENGTH_MS / 2000)
 
         # Start detection in separate thread
         detection_thread = Thread(target=detection_loop)

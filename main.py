@@ -1,16 +1,16 @@
 import os
 import json
-import pickle
 import time
 import torch
 from tqdm import tqdm
+import numpy as np
 
-from config import SAMPLE_RATE, WAKEWORD, CACHE_DIR, SAMPLES
-from model_utils import TinyWakeWordModel
+
+from model_utils import TinyWakeWordModel, load_model
 from teacher import check_device, load_model_and_processor
 from datapreprocessor import WakewordProcessor, create_training_data
-import numpy as np
-from config import INPUT_FEATURES, HIDDEN_SIZE, NUM_LAYERS, WINDOW_SIZE_MS, HOP_LENGTH_MS
+from config import INPUT_FEATURES, HIDDEN_SIZE, NUM_LAYERS, WINDOW_SIZE_MS, HOP_LENGTH_MS, SAMPLE_RATE, WAKEWORD, \
+    SAMPLES, MODEL_ID, MLS_PATH, LOCAL_RECORDINGS, NO_CACHE
 
 
 def optimize_memory_settings():
@@ -59,7 +59,7 @@ def optimize_memory_settings():
         print("Could not adjust system resource limits")
 
 
-def train_model(X_train, y_train, device, epochs=15, batch_size=64):
+def train_model(X_train, y_train, device, epochs=15, batch_size=64, continue_training=False):
     """
     Train the wake word detection model with validation split and early stopping.
 
@@ -106,7 +106,13 @@ def train_model(X_train, y_train, device, epochs=15, batch_size=64):
     )
 
     # Create model
-    model = TinyWakeWordModel().to(device)
+
+    if continue_training:
+        model = load_model()
+        model.to(device)
+        model.train()
+    else:
+        model = TinyWakeWordModel().to(device)
 
     # Use binary cross entropy loss with class weights to handle imbalanced data
     pos_weight = torch.tensor([3.0]).to(device)  # Adjust based on class distribution
@@ -249,9 +255,6 @@ def export_for_esp32(model, output_dir="esp32_model"):
         model: Trained PyTorch model
         output_dir: Output directory for the exported model
     """
-    import os
-    import torch
-    import numpy as np
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -363,16 +366,12 @@ def export_for_esp32(model, output_dir="esp32_model"):
     return model_path
 
 
-def load_or_create_training_data(cache_dir, wakeword, samples, model_id, mls_path, device):
+def load_or_create_training_data(cache_dir, device, dataset_path = MLS_PATH):
     """
     Loads training data from cache if available, or creates and caches it if not.
 
     Args:
         cache_dir (str): Directory for cached files
-        wakeword (str): The wake word being trained
-        samples (int): Maximum number of samples to process
-        model_id (str): ID of the teacher model
-        mls_path (str): Path to the MLS dataset
         device (torch.device): Device to use for processing
 
     Returns:
@@ -382,14 +381,14 @@ def load_or_create_training_data(cache_dir, wakeword, samples, model_id, mls_pat
     os.makedirs(cache_dir, exist_ok=True)
 
     # Generate a cache key based on relevant parameters
-    cache_key = f"{wakeword}_{samples}_{model_id.replace('/', '_')}"
+    cache_key = f"{SAMPLES}_{dataset_path.replace('/', '-')}"
     training_data_cache_path = os.path.join(cache_dir, f"training_data_{cache_key}.npz")
 
     # Try to load training data from cache
-    if os.path.exists(training_data_cache_path):
+    if os.path.exists(training_data_cache_path) and not NO_CACHE:
         print(f"Loading training data from cache: {training_data_cache_path}")
         try:
-            data = np.load(training_data_cache_path)
+            data = np.load(training_data_cache_path, allow_pickle=True)
             X_train = data['X_train']
             y_train = data['y_train']
             dataset_info = data['dataset_info'].item() if 'dataset_info' in data else {}
@@ -398,18 +397,17 @@ def load_or_create_training_data(cache_dir, wakeword, samples, model_id, mls_pat
         except Exception as e:
             print(f"Error loading cache: {e}. Will regenerate training data.")
 
+    print(f"Cache miss, creating training data: {training_data_cache_path}")
     # If we get here, we need to generate the data
-    print(f"Loading teacher model: {model_id}")
-    teacher_processor, teacher_model = load_model_and_processor(model_id, device)
+    teacher_processor, teacher_model = load_model_and_processor(device)
 
     # Initialize the wakeword processor
-    processor = WakewordProcessor(mls_path, teacher_model, teacher_processor, device)
+    processor = WakewordProcessor(dataset_path, teacher_model, teacher_processor, device)
 
     # Process the dataset
-    print(f"Processing dataset with wakeword: '{wakeword}'")
+    print(f"Processing dataset with wakeword: '{WAKEWORD}'")
     start_time = time.time()
     dataset, wakeword_locations = processor.process_dataset(
-        max_files=samples,
         include_negatives=True
     )
     process_time = time.time() - start_time
@@ -441,9 +439,10 @@ def load_or_create_training_data(cache_dir, wakeword, samples, model_id, mls_pat
 def main():
     """Main function with memory-efficient wakeword model training."""
     # Configuration
-    MLS_PATH = "/home/js/Downloads/mls_german_opus/train"  # Update with your path
-    MODEL_ID = "jonatasgrosman/wav2vec2-large-xlsr-53-german"
     CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
+
+    DATASOURCE = LOCAL_RECORDINGS
+    # DATASOURCE = MLS_PATH
 
     # Check device
     device = check_device()
@@ -451,11 +450,8 @@ def main():
     # Load or create training data with caching
     X_train, y_train, dataset_info = load_or_create_training_data(
         cache_dir=CACHE_DIR,
-        wakeword=WAKEWORD,
-        samples=SAMPLES,
-        model_id=MODEL_ID,
-        mls_path=MLS_PATH,
-        device=device
+        device=device,
+        dataset_path=DATASOURCE
     )
 
     # Check if we have enough data for training
@@ -468,7 +464,7 @@ def main():
 
     # Train model
     print("Training wakeword detection model...")
-    model = train_model(X_train, y_train, device)
+    model = train_model(X_train, y_train, device, continue_training=True)
 
     # Export model for ESP32-S3
     print("Exporting model for ESP32-S3...")
@@ -476,21 +472,6 @@ def main():
 
     print(f"\nWakeword model training completed. Model saved to {model_path}")
 
-    # Save training summary
-    cache_key = f"{WAKEWORD}_{SAMPLES}_{MODEL_ID.replace('/', '_')}"
-    summary = {
-        "wakeword": WAKEWORD,
-        "positive_examples": int(sum(y_train == 1.0)),
-        "negative_examples": int(sum(y_train == 0.0)),
-        "model_path": model_path,
-        **dataset_info  # Unpack the dataset info into the summary
-    }
-
-    summary_path = os.path.join(CACHE_DIR, f"training_summary_{cache_key}.json")
-    with open(summary_path, 'w') as f:
-        json.dump(summary, f, indent=2)
-
-    print(f"Training summary saved to {summary_path}")
 
 
 if __name__ == "__main__":

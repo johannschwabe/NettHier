@@ -2,26 +2,22 @@ import os
 import re
 import json
 import time
-from functools import partial
 from typing import List, Dict, Tuple, Optional, Union, Any
 
 import numpy as np
-import torch
 import librosa
 import pandas as pd
 from datasets import Dataset
 from tqdm import tqdm
-import concurrent.futures
 import random
 
-from config import WAKEWORD, CACHE_DIR, CACHE_FILE, NO_CACHE, SAMPLE_RATE
+from config import WAKEWORD, NO_CACHE, SAMPLE_RATE, SAMPLES
 
 
 class WakewordDataLoader:
     """Efficient data loader for wakeword model training that minimizes memory usage."""
 
-    def __init__(self, base_path: str, wakeword: str, cache_dir: str = CACHE_DIR,
-                 cache_file: str = CACHE_FILE, no_cache: bool = NO_CACHE):
+    def __init__(self, base_path: str, wakeword: str, no_cache: bool = NO_CACHE):
         """
         Initialize the wakeword data loader.
 
@@ -34,15 +30,12 @@ class WakewordDataLoader:
         """
         self.base_path = base_path
         self.wakeword = wakeword.lower()
-        self.cache_dir = cache_dir
-        self.cache_file = cache_file
+        self.cache_file = f"cache/wakeword_locations-{self.base_path.replace('/', '-')}.json"
         self.no_cache = no_cache
 
         # Compiled regex pattern for faster matching
         self.wakeword_pattern = re.compile(r'\b' + re.escape(self.wakeword) + r'\b')
 
-        # Ensure cache directory exists
-        os.makedirs(cache_dir, exist_ok=True)
 
         # Dictionary to store file metadata (without loading audio)
         self.file_metadata = {}
@@ -121,13 +114,12 @@ class WakewordDataLoader:
             json.dump(self.wakeword_locations, f)
         print(f"Saved wakeword locations to cache: {self.cache_file}")
 
-    def get_filtered_dataset(self, include_all: bool = False, max_files: Optional[int] = None) -> Dataset:
+    def get_filtered_dataset(self, include_all: bool = False) -> Dataset:
         """
         Get a filtered HuggingFace dataset with only relevant files.
 
         Args:
             include_all: Whether to include all files (for negative examples)
-            max_files: Maximum number of files to include (None for all)
 
         Returns:
             HuggingFace Dataset object with filtered files
@@ -164,8 +156,8 @@ class WakewordDataLoader:
             selected_file_ids = wakeword_files
 
         # Apply max_files limit if specified
-        if max_files is not None:
-            selected_file_ids = selected_file_ids[:max_files]
+        if SAMPLES is not None:
+            selected_file_ids = selected_file_ids[:SAMPLES]
 
         # Build dataset entries
         for file_id in selected_file_ids:
@@ -324,6 +316,8 @@ def load_audio(path: str, sample_rate: int = SAMPLE_RATE) -> Tuple[np.ndarray, i
         print(f"Error loading audio file {path}: {e}")
         # Return 1 second of silence as fallback
         return np.zeros(sample_rate, dtype=np.float32), sample_rate
+
+
 if __name__ == "__main__":
     # Example usage
     MLS_PATH = "/home/js/Downloads/mls_german_opus/train"

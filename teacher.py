@@ -2,8 +2,10 @@ import os
 import torch
 import librosa
 import pandas as pd
-from datasets import Dataset
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+from datasets import Dataset
+
+from config import MODEL_ID
 
 
 def check_device():
@@ -93,20 +95,19 @@ def speech_file_to_array_fn(batch):
     return batch
 
 
-def load_model_and_processor(model_id, device):
+def load_model_and_processor(device):
     """
     Load the speech recognition model and processor.
 
     Args:
-        model_id: Pretrained model ID
         device: Torch device to use
 
     Returns:
         Tuple of (processor, model)
     """
     print("Loading model and processor...")
-    processor = Wav2Vec2Processor.from_pretrained(model_id)
-    model = Wav2Vec2ForCTC.from_pretrained(model_id, torch_dtype=torch.float16).to(device)
+    processor = Wav2Vec2Processor.from_pretrained(MODEL_ID)
+    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID, torch_dtype=torch.float16).to(device)
     return processor, model
 
 
@@ -202,7 +203,7 @@ def main():
     mls_dataset = mls_dataset.map(speech_file_to_array_fn)
 
     # Load model and processor
-    processor, model = load_model_and_processor(MODEL_ID, device)
+    processor, model = load_model_and_processor(device)
 
     # Prepare inputs
     inputs = prepare_inputs(processor, mls_dataset, device)

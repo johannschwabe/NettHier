@@ -3,11 +3,11 @@ Model utilities for wake word detection.
 """
 
 import os
-import time
 import torch
 import torch.nn as nn
-import numpy as np
 import config
+
+from config import DETECTION_THRESHOLD
 
 
 class TinyWakeWordModel(nn.Module):
@@ -112,6 +112,59 @@ class TinyWakeWordModel(nn.Module):
 
 def load_model(model_path=config.MODEL_PATH):
     """
+    Load the wake word detection model for continued training.
+
+    Args:
+        model_path: Path to the model file
+
+    Returns:
+        Loaded model
+    """
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+
+    try:
+        # Always create a fresh instance of the model architecture
+        fresh_model = TinyWakeWordModel()
+
+        try:
+            # If it's a TorchScript model
+            loaded_model = torch.jit.load(model_path, map_location='cpu')
+            print("Loaded TorchScript model")
+
+            # Copy parameters from TorchScript model to the fresh model
+            with torch.no_grad():
+                for name, param in fresh_model.named_parameters():
+                    # Find corresponding parameter in the TorchScript model
+                    # The parameter access can differ between regular and TorchScript models
+                    try:
+                        # Try the direct access first
+                        src_param = getattr(loaded_model, name)
+                        param.copy_(src_param)
+                    except (AttributeError, RuntimeError):
+                        # If that fails, we need to extract the parameter differently
+                        print(f"Could not directly copy parameter {name}, using alternative method")
+                        # This part may need adjustment based on how your TorchScript model is structured
+                        for src_name, src_param in loaded_model.named_parameters():
+                            if src_name.endswith(name.split('.')[-1]):
+                                if param.shape == src_param.shape:
+                                    param.copy_(src_param)
+                                    break
+
+            return fresh_model
+
+        except Exception as e:
+            print(f"Not a TorchScript model, loading as regular PyTorch model: {e}")
+            # For regular PyTorch model, just load the state dict
+            fresh_model.load_state_dict(torch.load(model_path, map_location='cpu'))
+            return fresh_model
+
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        raise
+
+def load_model_eval(model_path=config.MODEL_PATH):
+    """
     Load the wake word detection model.
 
     Args:
@@ -155,12 +208,9 @@ class WakeWordDetector:
         Args:
             model_path: Path to the model file
         """
-        self.model = load_model(model_path)
+        self.model = load_model_eval(model_path)
         self.threshold = config.DETECTION_THRESHOLD
-        self.positive_count = 0
         self.required_positives = config.ACTIVATION_FRAMES
-        self.last_detection_time = 0
-        self.cooldown_period = 2.0  # seconds
 
     def process_audio(self, audio):
         """
@@ -172,10 +222,6 @@ class WakeWordDetector:
         Returns:
             True if wake word detected, False otherwise
         """
-        # Check if we're in cooldown period
-        current_time = time.time()
-        if current_time - self.last_detection_time < self.cooldown_period:
-            return False
 
         try:
             # Extract features
@@ -187,19 +233,17 @@ class WakeWordDetector:
                 output = self.model(features_tensor)
                 prediction = torch.sigmoid(output).item()
 
+            level = int(prediction * 100)
             # Update detection state
             if prediction > self.threshold:
-                self.positive_count += 1
-                print(
-                    f"Potential wake word detected! Confidence: {prediction:.4f}, Count: {self.positive_count}/{self.required_positives}")
-            else:
-                self.positive_count = max(0, self.positive_count - 1)  # Decay count if not detected
-
-            # Check if we have enough consecutive detections
-            if self.positive_count >= self.required_positives:
-                self.last_detection_time = current_time
-                self.positive_count = 0
+                print("X"*level)
                 return True
+            else:
+                achieved = "." * level
+                missing = "." * (int(DETECTION_THRESHOLD * 100 )- level)
+                maxi = "-" * (100 - int(DETECTION_THRESHOLD * 100))
+                bar =  f"{achieved}X{missing}|{maxi}"
+                print(bar)
 
             return False
 

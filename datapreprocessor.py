@@ -1,12 +1,12 @@
 import random
 import re
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Any
 
 import numpy as np
 import torch
 from tqdm import tqdm
 
-from audio_utils import extract_mfcc_features, save_segment, save_audio_examples
+from audio_utils import extract_mfcc_features, save_segment
 from config import SAMPLE_RATE, INPUT_FEATURES, WINDOW_SIZE_MS, WAKEWORD, WINDOW_SIZE_SAMPLES
 from dataloader import WakewordDataLoader, load_audio
 from teacher import run_inference
@@ -589,12 +589,11 @@ class WakewordProcessor:
 
         return wakeword_locations
 
-    def process_dataset(self, max_files: Optional[int] = None, include_negatives: bool = True) -> Tuple[Any, Dict]:
+    def process_dataset(self, include_negatives: bool = True) -> Tuple[Any, Dict]:
         """
         Process the dataset to extract wakeword segments and create training data.
 
         Args:
-            max_files: Maximum number of files to process
             include_negatives: Whether to include negative examples
 
         Returns:
@@ -603,7 +602,6 @@ class WakewordProcessor:
         # Get filtered dataset
         filtered_dataset = self.data_loader.get_filtered_dataset(
             include_all=include_negatives,
-            max_files=max_files
         )
 
         # Lazily load audio data - this will only happen when the item is accessed
