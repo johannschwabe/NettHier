@@ -1,0 +1,12 @@
+{
+  "input_features": 13,
+  "hidden_size": 24,
+  "num_layers": 3,
+  "window_size_ms": 500,
+  "hop_length_ms": 100,
+  "sample_rate": 16000,
+  "fft_size": 512,
+  "mel_bands": 40,
+  "model_size_bytes": 73174,
+  "detection_threshold": 0.7
+}
