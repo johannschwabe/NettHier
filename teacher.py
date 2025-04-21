@@ -151,7 +151,6 @@ def run_inference(model, inputs, processor):
     Returns:
         List of predicted sentences
     """
-    print("Running inference...")
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits

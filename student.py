@@ -1,5 +1,7 @@
 import os
 import json
+import re
+
 import numpy as np
 import torch
 import librosa
@@ -11,13 +13,270 @@ from audio_utils import extract_mfcc_features
 from config import SAMPLE_RATE, INPUT_FEATURES, WINDOW_SIZE_MS, CACHE_DIR, NO_CACHE, CACHE_FILE, WAKEWORD, \
     WINDOW_SIZE_SAMPLES, HOP_LENGTH_SAMPLES, HIDDEN_SIZE, NUM_LAYERS, HOP_LENGTH_MS, SAMPLES
 from model_utils import TinyWakeWordModel
-from teacher import load_mls_dataset, speech_file_to_array_fn, check_device
+from teacher import load_mls_dataset, speech_file_to_array_fn, check_device, prepare_inputs, run_inference
 from teacher import load_model_and_processor
+
+
+
+def find_wakeword_with_binary_search(audio, sample_rate, teacher_model, teacher_processor, wakeword, device,
+                                     file_id=None, output_dir="wakeword_segments", sentence=None):
+    """
+    Find wake word using binary search approach to speed up detection.
+
+    Args:
+        audio: Audio signal array
+        sample_rate: Audio sample rate in Hz
+        teacher_model: The wav2vec2 teacher model
+        teacher_processor: The wav2vec2 processor
+        wakeword: Wake word to search for
+        device: Torch device
+        file_id: Identifier for the source audio file
+        output_dir: Directory to save audio segments
+        sentence: Transcript of the audio to count expected occurrences
+
+    Returns:
+        List of (start_time, end_time) tuples in seconds
+    """
+
+    # Ensure audio is a numpy array
+    audio = np.array(audio, dtype=np.float32)
+
+    # Add 1 second of silence padding at beginning and end
+    padding_size = sample_rate  # 1 second of silence
+    padded_audio = np.pad(audio, (padding_size, padding_size), 'constant', constant_values=0)
+
+    # Keep track of original audio position
+    original_start = padding_size
+
+    # Count expected occurrences based on transcript if provided
+    expected_occurrences = 0
+    if sentence:
+        # Count case-insensitive occurrences in transcript
+        expected_occurrences = len(re.findall(wakeword, sentence.lower()))
+        print(f"Expected {expected_occurrences} occurrences of '{wakeword}' based on transcript")
+
+    # Initialize list to store found wake word segments
+    wakeword_segments = []
+
+    # Define minimum segment size that could contain the wake word (in seconds)
+    # This is a tunable parameter - start with a conservative estimate
+    min_segment_duration = 0.5  # seconds
+    min_segment_size = int(min_segment_duration * sample_rate)
+
+    # Define overlap to ensure wake word isn't missed at boundaries
+    # The overlap should be longer than the expected duration of the wake word
+    overlap_duration = 0.3  # seconds
+    overlap_size = int(overlap_duration * sample_rate)
+
+    # Queue to store segments for processing
+    segments_to_process = [(0, len(padded_audio))]
+
+    # Counter for processed segments
+    processed_segments = 0
+
+    # Process segments until we find all expected occurrences or exhaust search
+    while segments_to_process and (not expected_occurrences or len(wakeword_segments) < expected_occurrences):
+        start, end = segments_to_process.pop(0)
+        segment_size = end - start
+        processed_segments += 1
+
+        # If the segment is too small, skip it
+        if segment_size < min_segment_size:
+            continue
+
+        # Process the current segment with the teacher model
+        segment_audio = padded_audio[start:end]
+
+        # Create a mock dataset with the segment audio
+        # The prepare_inputs function expects a dataset with a 'speech' key
+        mock_dataset = {"speech": segment_audio}
+
+        # Prepare inputs using the helper function
+        inputs = prepare_inputs(teacher_processor, mock_dataset, device)
+
+        # Run inference using the helper function
+        transcriptions = run_inference(teacher_model, inputs, teacher_processor)
+        transcription = transcriptions[0].lower()  # Get the first (and only) transcription
+
+        # Check if wake word is in this segment
+        if wakeword in transcription:
+            # If the segment is small enough, consider it a match
+            if segment_size <= min_segment_size * 4:
+                # Time relative to padded audio
+                padded_start_time = start / sample_rate
+                padded_end_time = end / sample_rate
+                print(
+                    f"Found wake word in segment ({padded_start_time:.2f}s - {padded_end_time:.2f}s): {transcription}")
+
+                # Adjust to original audio coordinates (remove padding offset)
+                original_start_time = max(0, (start - original_start) / sample_rate)
+                original_end_time = min(len(audio) / sample_rate, (end - original_start) / sample_rate)
+
+                # Check if this segment overlaps with previously found segments
+                is_overlapping = False
+                for seg_start, seg_end in wakeword_segments:
+                    if not (original_end_time < seg_start or original_start_time > seg_end):
+                        is_overlapping = True
+                        break
+
+                if not is_overlapping:
+                    wakeword_segments.append((original_start_time, original_end_time))
+
+                    # Save audio segment if requested
+                    if file_id:
+                        save_segment(audio, sample_rate, original_start_time, original_end_time,
+                                     file_id, len(wakeword_segments) - 1, "binary_search", output_dir)
+
+            # If the segment is large, split it and add to queue
+            else:
+                mid = (start + end) // 2
+
+                # Add both halves to the queue with overlap
+                # First half: from start to mid + overlap
+                segments_to_process.append((start, min(end, mid + overlap_size)))
+                # Second half: from mid - overlap to end
+                segments_to_process.append((max(start, mid - overlap_size), end))
+
+
+    print(f"Binary search processed {processed_segments} segments")
+    print(f"Found {len(wakeword_segments)} wake word occurrences")
+
+    # Sort segments by start time
+    wakeword_segments.sort(key=lambda x: x[0])
+
+    # Refine the segments if needed
+    refined_segments = refine_wakeword_segments(audio, sample_rate, wakeword_segments, teacher_model,
+                                                teacher_processor, wakeword, device, file_id, output_dir)
+
+    return refined_segments
+
+
+def refine_wakeword_segments(audio, sample_rate, segments, teacher_model, teacher_processor, wakeword, device,
+                             file_id=None, output_dir="wakeword_segments"):
+    """
+    Refine wake word segments by progressively trimming from start and end until
+    the wake word is no longer detected, then reducing the trim rate.
+
+    Args:
+        audio: Audio signal array
+        sample_rate: Audio sample rate in Hz
+        segments: List of (start_time, end_time) tuples in seconds
+        teacher_model: The wav2vec2 teacher model
+        teacher_processor: The wav2vec2 processor
+        wakeword: Wake word to search for
+        device: Torch device
+        file_id: Identifier for the source audio file
+        output_dir: Directory to save audio segments
+
+    Returns:
+        List of refined (start_time, end_time) tuples in seconds
+    """
+
+    refined_segments = []
+
+    for seg_idx, (start_time, end_time) in enumerate(segments):
+        # Convert times to sample indices
+        start_sample = max(0, int(start_time * sample_rate))
+        end_sample = min(len(audio), int(end_time * sample_rate))
+        original_start = start_sample
+        original_end = end_sample
+
+        # Set initial trim rates in samples
+        # Start with larger steps (0.1s worth of samples) and reduce as needed
+        trim_rate_start = int(0.2 * sample_rate)
+        trim_rate_end = int(0.2 * sample_rate)
+
+        # Set minimum trim rate (about 10ms worth of samples)
+        min_trim_rate = int(0.05 * sample_rate)
+
+        # Refine the start boundary
+        while trim_rate_start >= min_trim_rate:
+            # Make a copy of the current start position before trimming
+            prev_start = start_sample
+
+            # Try trimming from the start
+            test_start = start_sample + trim_rate_start
+            if end_sample - test_start <= start_sample * 0.1:
+                trim_rate_start = trim_rate_start // 2
+                continue
+
+            # Extract segment with the new start position
+            segment = audio[test_start:end_sample]
+
+            # Create a mock dataset with the segment audio
+            mock_dataset = {"speech": segment}
+
+            # Prepare inputs and run inference
+            inputs = prepare_inputs(teacher_processor, mock_dataset, device)
+            transcriptions = run_inference(teacher_model, inputs, teacher_processor)
+            transcription = transcriptions[0].lower()
+
+            # Check if wake word is still present
+            if wakeword in transcription:
+                # We can trim more from the start
+                start_sample = test_start
+            else:
+                # We've trimmed too much, go back and reduce trim rate
+                start_sample = prev_start
+                trim_rate_start = trim_rate_start // 2
+
+        found_start = start_sample
+        start_sample -= int(sample_rate * 0.5)
+        # Refine the end boundary
+        while trim_rate_end >= min_trim_rate:
+            # Make a copy of the current end position before trimming
+            prev_end = end_sample
+
+            # Try trimming from the end
+            test_end = end_sample - trim_rate_end
+            if test_end - start_sample <= start_sample * 0.1:
+                trim_rate_end = trim_rate_end // 2
+                continue
+
+            # Extract segment with the new end position
+            segment = audio[start_sample:test_end]
+
+            # Create a mock dataset with the segment audio
+            mock_dataset = {"speech": segment}
+
+            # Prepare inputs and run inference
+            inputs = prepare_inputs(teacher_processor, mock_dataset, device)
+            transcriptions = run_inference(teacher_model, inputs, teacher_processor)
+            transcription = transcriptions[0].lower()
+
+            # Check if wake word is still present
+            if wakeword in transcription:
+                # We can trim more from the end
+                end_sample = test_end
+            else:
+                # We've trimmed too much, go back and reduce trim rate
+                end_sample = prev_end
+                trim_rate_end = trim_rate_end // 2
+            print(f"transcription: {transcription}, test_end: {end_sample}, trim_rate_end: {trim_rate_end}")
+
+
+        # Convert sample indices back to time
+        refined_start_time = found_start / sample_rate
+        refined_end_time = end_sample / sample_rate + 0.05
+
+        print(f"Segment {seg_idx + 1}: Original ({start_time:.3f}s - {end_time:.3f}s), "
+              f"Refined ({refined_start_time:.3f}s - {refined_end_time:.3f}s)")
+        print(f"Trimmed {(start_sample - original_start) / sample_rate:.3f}s from start, "
+              f"{(original_end - end_sample) / sample_rate:.3f}s from end")
+
+        # Save refined segment if requested
+        if file_id:
+            save_segment(audio, sample_rate, refined_start_time, refined_end_time,
+                         file_id, seg_idx, "refined", output_dir)
+
+        refined_segments.append((refined_start_time, refined_end_time))
+
+    return refined_segments
 
 
 def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, device):
     """
-    Load wake word locations from cache or create cache using teacher model.
+    Load wake word locations from cache or create cache using teacher model with binary search.
 
     Args:
         dataset: Dataset containing audio samples
@@ -28,6 +287,7 @@ def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, dev
     Returns:
         Dictionary mapping file_id to wake word locations
     """
+
     # Create cache directory if it doesn't exist
     os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -37,7 +297,7 @@ def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, dev
         with open(CACHE_FILE, 'r') as f:
             return json.load(f)
 
-    print("Generating wake word locations using teacher model...")
+    print("Generating wake word locations using teacher model with binary search...")
     wakeword_locations = {}
 
     # Process each audio file
@@ -56,16 +316,17 @@ def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, dev
         speech = dataset[i]["speech"]
 
         try:
-            # Use sliding windows approach to find wake word
-            word_timestamps = find_wakeword_with_sliding_windows(
+            # Use binary search approach to find wake word
+            word_timestamps = find_wakeword_with_binary_search(
                 speech,
-                SAMPLE_RATE,
+                dataset[i].get("sampling_rate", SAMPLE_RATE),  # Use provided rate or default
                 teacher_model,
                 teacher_processor,
                 WAKEWORD.strip(),  # Remove any whitespace
                 device,
                 file_id,
-                "wakeword_segments"
+                "wakeword_segments",
+                sentence
             )
 
             wakeword_locations[file_id] = word_timestamps
@@ -80,136 +341,6 @@ def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, dev
 
     return wakeword_locations
 
-
-def find_wakeword_with_sliding_windows(audio, sample_rate, teacher_model, teacher_processor, wakeword, device,
-                                       file_id=None, output_dir="wakeword_segments"):
-    """
-    Find wake word by processing overlapping windows with the teacher model.
-    Adds silence padding to handle words at the beginning or end of audio.
-
-    Args:
-        audio: Audio signal array
-        sample_rate: Audio sample rate in Hz
-        teacher_model: The wav2vec2 teacher model
-        teacher_processor: The wav2vec2 processor
-        wakeword: Wake word to search for
-        device: Torch device
-        file_id: Identifier for the source audio file
-        output_dir: Directory to save audio segments
-
-    Returns:
-        List of (start_time, end_time) tuples in seconds
-    """
-    # Ensure audio is a numpy array
-    audio = np.array(audio, dtype=np.float32)
-
-    # Add 1 second of silence padding at beginning and end
-    padding_size = sample_rate  # 1 second of silence
-    padded_audio = np.pad(audio, (padding_size, padding_size), 'constant', constant_values=0)
-
-    # Keep track of original audio position
-    original_start = padding_size
-
-    # Define window parameters
-    window_duration = 1.0  # Window duration in seconds
-    window_overlap = 0.99  # Overlap between windows (as a fraction of window_duration)
-    window_size = int(window_duration * sample_rate)
-    hop_size = int(window_size * (1 - window_overlap))
-
-    print(f"Processing audio with sliding windows (duration={window_duration}s, overlap={window_overlap * 100}%)")
-
-    # Generate sliding windows
-    windows = []
-    for start in range(0, len(padded_audio) - window_size + 1, hop_size):
-        end = start + window_size
-        windows.append((start, end))
-
-    print(f"Generated {len(windows)} windows")
-
-    # Process each window with the teacher model
-    wakeword_windows = []
-
-    for i, (start, end) in enumerate(windows):
-        window_audio = padded_audio[start:end]
-
-        # Process with teacher model
-        inputs = teacher_processor(
-            window_audio,
-            sampling_rate=sample_rate,
-            return_tensors="pt",
-            padding=True
-        )
-
-        # Handle dtype conversion
-        model_dtype = next(teacher_model.parameters()).dtype
-        input_values = inputs.input_values.to(device, dtype=model_dtype)
-        attention_mask = inputs.attention_mask.to(device) if inputs.attention_mask is not None else None
-
-        with torch.no_grad():
-            outputs = teacher_model(input_values, attention_mask=attention_mask)
-            logits = outputs.logits
-            predicted_ids = torch.argmax(logits, dim=-1)
-
-            # Get transcription
-            transcription = teacher_processor.batch_decode(predicted_ids)[0].lower()
-
-            # Check if wake word is in this window
-            if wakeword in transcription:
-                # Time relative to padded audio
-                padded_start_time = start / sample_rate
-                padded_end_time = end / sample_rate
-                print(
-                    f"Window {i} ({padded_start_time:.2f}s - {padded_end_time:.2f}s) contains wake word: {transcription}")
-                wakeword_windows.append((i, start, end, transcription))
-
-    if not wakeword_windows:
-        print(f"Wake word '{wakeword}' not found in any window")
-        return []
-
-    # Identify the earliest and latest windows containing the wake word
-    window_indices = [w[0] for w in wakeword_windows]
-    first_window_idx = min(window_indices)
-    last_window_idx = max(window_indices)
-
-    # Get corresponding windows
-    first_window = wakeword_windows[window_indices.index(first_window_idx)]
-    last_window = wakeword_windows[window_indices.index(last_window_idx)]
-
-    if(first_window == last_window):
-        wakeword_start = first_window[1]
-        wakeword_end = first_window[2]
-    else:
-        wakeword_start = last_window[1]
-        wakeword_end = first_window[2]
-
-    print(f"First window start: {wakeword_start/sample_rate:2f} end: {wakeword_end/sample_rate:2f}")
-    # Adjust to original audio coordinates (remove padding offset)
-    original_wakeword_start = wakeword_start - original_start
-    original_wakeword_end = wakeword_end - original_start
-
-    # Clamp to original audio boundaries
-    original_wakeword_start = max(0, original_wakeword_start)
-    original_wakeword_end = min(len(audio), original_wakeword_end)
-
-    # Convert to time
-    start_time = original_wakeword_start / sample_rate
-    end_time = original_wakeword_end / sample_rate
-
-    print(f"Estimated wake word position in original audio: {start_time:.2f}s - {end_time:.2f}s")
-
-    # Save both the original segment and the padded segment if requested
-    if file_id:
-        # Save original segment
-        save_segment(audio, sample_rate, start_time, end_time,
-                     file_id, 0, "original", output_dir)
-
-        # Also save the padded segment for reference (from padded audio)
-        padded_start_time = wakeword_start / sample_rate
-        padded_end_time = wakeword_end / sample_rate
-        save_segment(padded_audio, sample_rate, padded_start_time, padded_end_time,
-                     file_id, 0, "padded", output_dir)
-
-    return [(start_time, end_time)]
 
 def save_segment(audio, sample_rate, start_time, end_time, file_id, segment_idx, label, output_dir="wakeword_segments"):
     """
