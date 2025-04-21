@@ -1,13 +1,16 @@
+import multiprocessing
 import os
 import json
 import re
+import time
+from functools import partial
 
 import numpy as np
 import torch
-import librosa
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import soundfile as sf
+
+import concurrent.futures
 
 from audio_utils import extract_mfcc_features
 from config import SAMPLE_RATE, INPUT_FEATURES, WINDOW_SIZE_MS, CACHE_DIR, NO_CACHE, CACHE_FILE, WAKEWORD, \
@@ -274,9 +277,30 @@ def refine_wakeword_segments(audio, sample_rate, segments, teacher_model, teache
     return refined_segments
 
 
+def prefilter_chunk(indices, dataset, wakeword):
+    # Compile pattern here since we can't pass compiled patterns between processes
+    wakeword_pattern = re.compile(r'\b' + re.escape(wakeword.lower()) + r'\b')
+    results = []
+    for idx in indices:
+        try:
+            file_id = dataset[idx]["file_id"]
+            sentence = dataset[idx].get("sentence", "").lower()
+
+            # Use regex for faster matching
+            has_wakeword = bool(wakeword_pattern.search(sentence))
+
+            results.append((idx, file_id, has_wakeword))
+        except Exception as e:
+            # Handle any potential issues with the dataset
+            print(f"Error in prefiltering index {idx}: {e}")
+            results.append((idx, f"error_{idx}", False))
+    return results
+
+
 def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, device):
     """
     Load wake word locations from cache or create cache using teacher model with binary search.
+    Uses highly optimized parallel prefiltering.
 
     Args:
         dataset: Dataset containing audio samples
@@ -287,7 +311,6 @@ def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, dev
     Returns:
         Dictionary mapping file_id to wake word locations
     """
-
     # Create cache directory if it doesn't exist
     os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -300,26 +323,67 @@ def load_or_create_wakeword_cache(dataset, teacher_model, teacher_processor, dev
     print("Generating wake word locations using teacher model with binary search...")
     wakeword_locations = {}
 
-    # Process each audio file
-    for i in tqdm(range(len(dataset))):
-        file_id = dataset[i]["file_id"]
-        sentence = dataset[i]["sentence"]
+    # Determine optimal chunk size based on CPU count
+    # Larger chunks reduce overhead but might distribute work less evenly
+    cpu_count = multiprocessing.cpu_count()
+    total_items = len(dataset)
+    chunk_size = max(100, total_items // (cpu_count * 10))  # Aim for ~10 chunks per CPU
 
-        # Skip if wake word is not in the sentence
-        if WAKEWORD not in sentence.lower():
-            wakeword_locations[file_id] = []
-            continue
+    # Create chunks of indices
+    index_chunks = [
+        list(range(i, min(i + chunk_size, total_items)))
+        for i in range(0, total_items, chunk_size)
+    ]
+
+    print(f"Prefiltering dataset in {len(index_chunks)} chunks with {chunk_size} items per chunk...")
+    start_time = time.time()
+
+    # Use ProcessPoolExecutor for CPU-bound task
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        # Create a partial function with the dataset
+        chunk_filter_fn = partial(prefilter_chunk, dataset=dataset, wakeword=WAKEWORD)
+
+        # Submit all chunks for processing
+        futures = [executor.submit(chunk_filter_fn, chunk) for chunk in index_chunks]
+
+        # Track progress and collect results
+        filtered_indices = []
+        files_without_wakeword = []
+
+        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures),
+                           desc="Prefiltering dataset"):
+            results = future.result()
+            for idx, file_id, has_wakeword in results:
+                if has_wakeword:
+                    filtered_indices.append(idx)
+                else:
+                    files_without_wakeword.append(file_id)
+
+    elapsed = time.time() - start_time
+    items_per_second = total_items / elapsed
+    print(f"Prefiltering completed in {elapsed:.2f} seconds ({items_per_second:.2f} items/sec)")
+
+    # Initialize wakeword_locations with empty lists for files without wake words
+    for file_id in files_without_wakeword:
+        wakeword_locations[file_id] = []
+
+    print(f"Found {len(filtered_indices)} files containing wake word out of {len(dataset)} total files")
+
+    # Process files with wake words sequentially
+    for idx in tqdm(filtered_indices, desc="Processing wake word files"):
+        file_id = dataset[idx]["file_id"]
+        sentence = dataset[idx]["sentence"]
 
         print(f"Processing file {file_id}: {sentence}")
 
         # Get audio signal
-        speech = dataset[i]["speech"]
+        speech = dataset[idx]["speech"]
 
         try:
             # Use binary search approach to find wake word
             word_timestamps = find_wakeword_with_binary_search(
                 speech,
-                dataset[i].get("sampling_rate", SAMPLE_RATE),  # Use provided rate or default
+                dataset[idx].get("sampling_rate", SAMPLE_RATE),  # Use provided rate or default
                 teacher_model,
                 teacher_processor,
                 WAKEWORD.strip(),  # Remove any whitespace
