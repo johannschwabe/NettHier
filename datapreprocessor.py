@@ -204,7 +204,7 @@ def refine_wakeword_segments(audio, sample_rate, segments, teacher_model, teache
 
         # Set minimum trim rate (about 10ms worth of samples)
         min_trim_rate = int(0.05 * sample_rate)
-
+        end_sample = end_sample + trim_rate_end
         # Refine the start boundary
         while trim_rate_start >= min_trim_rate:
             # Make a copy of the current start position before trimming
@@ -237,6 +237,7 @@ def refine_wakeword_segments(audio, sample_rate, segments, teacher_model, teache
                 trim_rate_start = trim_rate_start // 2
 
         found_start = start_sample
+        end_sample = original_end
         start_sample -= int(sample_rate * 0.5)
         # Refine the end boundary
         while trim_rate_end >= min_trim_rate:

@@ -19,12 +19,13 @@ HIDDEN_SIZE = 24
 NUM_LAYERS = 3
 
 # Detection settings
-DETECTION_THRESHOLD = 0.5  # Probability threshold for positive detection
+DETECTION_THRESHOLD = 0.8  # Probability threshold for positive detection
 ACTIVATION_FRAMES = 3  # Number of consecutive positive frames needed for detection
 
 # Model paths
 ESP32_MODEL_DIR = "esp32_model"  # Directory containing exported models
 MODEL_PATH = f"{ESP32_MODEL_DIR}/wakeword_model.pt"
+DEV_MODEL_PATH = f"{ESP32_MODEL_DIR}/wakeword_model_original.pt"
 MODEL_ID = "jonatasgrosman/wav2vec2-large-xlsr-53-german"
 MLS_PATH = "/home/js/Downloads/mls_german_opus/train"
 LOCAL_RECORDINGS = "/home/js/PycharmProjects/PythonProject/recorded"
@@ -33,5 +34,5 @@ LOCAL_RECORDINGS = "/home/js/PycharmProjects/PythonProject/recorded"
 # Wake word
 WAKEWORD = " danke"
 
-NO_CACHE = True
+NO_CACHE = False
 SAMPLES = None

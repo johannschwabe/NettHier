@@ -110,7 +110,7 @@ class TinyWakeWordModel(nn.Module):
         return x
 
 
-def load_model(model_path=config.MODEL_PATH):
+def load_model(model_path=config.DEV_MODEL_PATH):
     """
     Load the wake word detection model for continued training.
 
@@ -127,37 +127,9 @@ def load_model(model_path=config.MODEL_PATH):
         # Always create a fresh instance of the model architecture
         fresh_model = TinyWakeWordModel()
 
-        try:
-            # If it's a TorchScript model
-            loaded_model = torch.jit.load(model_path, map_location='cpu')
-            print("Loaded TorchScript model")
-
-            # Copy parameters from TorchScript model to the fresh model
-            with torch.no_grad():
-                for name, param in fresh_model.named_parameters():
-                    # Find corresponding parameter in the TorchScript model
-                    # The parameter access can differ between regular and TorchScript models
-                    try:
-                        # Try the direct access first
-                        src_param = getattr(loaded_model, name)
-                        param.copy_(src_param)
-                    except (AttributeError, RuntimeError):
-                        # If that fails, we need to extract the parameter differently
-                        print(f"Could not directly copy parameter {name}, using alternative method")
-                        # This part may need adjustment based on how your TorchScript model is structured
-                        for src_name, src_param in loaded_model.named_parameters():
-                            if src_name.endswith(name.split('.')[-1]):
-                                if param.shape == src_param.shape:
-                                    param.copy_(src_param)
-                                    break
-
-            return fresh_model
-
-        except Exception as e:
-            print(f"Not a TorchScript model, loading as regular PyTorch model: {e}")
-            # For regular PyTorch model, just load the state dict
-            fresh_model.load_state_dict(torch.load(model_path, map_location='cpu'))
-            return fresh_model
+        fresh_model.load_state_dict(torch.load(model_path))
+        fresh_model.train()
+        return fresh_model
 
     except Exception as e:
         print(f"Error loading model: {e}")
@@ -211,6 +183,7 @@ class WakeWordDetector:
         self.model = load_model_eval(model_path)
         self.threshold = config.DETECTION_THRESHOLD
         self.required_positives = config.ACTIVATION_FRAMES
+        self.consecutive = 0
 
     def process_audio(self, audio):
         """
@@ -236,14 +209,27 @@ class WakeWordDetector:
             level = int(prediction * 100)
             # Update detection state
             if prediction > self.threshold:
+                self.consecutive += 1
+
+            if self.consecutive > self.required_positives:
+                self.consecutive = 0
                 print("X"*level)
                 return True
             else:
-                achieved = "." * level
-                missing = "." * (int(DETECTION_THRESHOLD * 100 )- level)
-                maxi = "-" * (100 - int(DETECTION_THRESHOLD * 100))
-                bar =  f"{achieved}X{missing}|{maxi}"
-                print(bar)
+
+                if prediction > self.threshold:
+                    achieved = "." * int(DETECTION_THRESHOLD * 100 )
+                    over = "-" * int(level - DETECTION_THRESHOLD * 100)
+                    remaining = "-" * int(100 - DETECTION_THRESHOLD * 100)
+                    bar = f"{achieved}|{over}X{remaining}"
+                    print(bar)
+                else:
+                    self.consecutive = 0
+                    achieved = "." * level
+                    missing = "." * (int(DETECTION_THRESHOLD * 100 )- level)
+                    maxi = "-" * (100 - int(DETECTION_THRESHOLD * 100))
+                    bar =  f"{achieved}X{missing}|{maxi}"
+                    print(bar)
 
             return False
 

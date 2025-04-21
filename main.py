@@ -10,7 +10,7 @@ from model_utils import TinyWakeWordModel, load_model
 from teacher import check_device, load_model_and_processor
 from datapreprocessor import WakewordProcessor, create_training_data
 from config import INPUT_FEATURES, HIDDEN_SIZE, NUM_LAYERS, WINDOW_SIZE_MS, HOP_LENGTH_MS, SAMPLE_RATE, WAKEWORD, \
-    SAMPLES, MODEL_ID, MLS_PATH, LOCAL_RECORDINGS, NO_CACHE
+    SAMPLES, MODEL_ID, MLS_PATH, LOCAL_RECORDINGS, NO_CACHE, MODEL_PATH
 
 
 def optimize_memory_settings():
@@ -59,7 +59,7 @@ def optimize_memory_settings():
         print("Could not adjust system resource limits")
 
 
-def train_model(X_train, y_train, device, epochs=15, batch_size=64, continue_training=False):
+def train_model(X_train, y_train, device, epochs=30, batch_size=64, continue_training=False):
     """
     Train the wake word detection model with validation split and early stopping.
 
@@ -106,11 +106,13 @@ def train_model(X_train, y_train, device, epochs=15, batch_size=64, continue_tra
     )
 
     # Create model
-
+    lr = 0.01
     if continue_training:
         model = load_model()
         model.to(device)
         model.train()
+        lr = 0.005
+        print("Loaded model")
     else:
         model = TinyWakeWordModel().to(device)
 
@@ -119,7 +121,7 @@ def train_model(X_train, y_train, device, epochs=15, batch_size=64, continue_tra
     criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # Use AdamW optimizer with learning rate schedule
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.02, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=6, verbose=True
     )
@@ -298,19 +300,18 @@ def export_for_esp32(model, output_dir="esp32_model"):
         optimized_model = torch.jit.optimize_for_inference(script_model)
 
         # 6. Save the model
-        model_path = os.path.join(output_dir, "wakeword_model.pt")
-        optimized_model.save(model_path)
-        print(f"Quantized model exported to {model_path}")
-        model_size = os.path.getsize(model_path) / 1024  # KB
+
+        optimized_model.save(MODEL_PATH)
+        print(f"Quantized model exported to {MODEL_PATH}")
+        model_size = os.path.getsize(MODEL_PATH) / 1024  # KB
 
     except Exception as e:
         print(f"Quantization failed: {e}")
         print("Saving non-quantized model instead")
         # If quantization fails, export the regular model
-        model_path = os.path.join(output_dir, "wakeword_model.pt")
-        torch.save(cpu_model.state_dict(), model_path)
-        print(f"Non-quantized model exported to {model_path}")
-        model_size = os.path.getsize(model_path) / 1024  # KB
+        torch.save(cpu_model.state_dict(), MODEL_PATH)
+        print(f"Non-quantized model exported to {MODEL_PATH}")
+        model_size = os.path.getsize(MODEL_PATH) / 1024  # KB
 
     # 7. Export model architecture and parameters as C header for direct embedding
     model_header_path = os.path.join(output_dir, "wakeword_model.h")
@@ -350,7 +351,7 @@ def export_for_esp32(model, output_dir="esp32_model"):
         "sample_rate": SAMPLE_RATE,
         "fft_size": 512,
         "mel_bands": 40,
-        "model_size_bytes": os.path.getsize(model_path),
+        "model_size_bytes": os.path.getsize(MODEL_PATH),
         "detection_threshold": 0.7
     }
 
@@ -363,7 +364,7 @@ def export_for_esp32(model, output_dir="esp32_model"):
     # 9. Print model size information
     print(f"Model size: {model_size:.2f} KB")
 
-    return model_path
+    return MODEL_PATH
 
 
 def load_or_create_training_data(cache_dir, device, dataset_path = MLS_PATH):
