@@ -12,69 +12,100 @@ import config
 
 class TinyWakeWordModel(nn.Module):
     """
-    Ultra-lightweight wake word detection model designed for ESP32-S3.
-    Uses minimal parameters and quantization-friendly operations.
+    Enhanced lightweight wake word detection model for ESP32-S3.
+    Slightly larger capacity while maintaining efficiency.
     """
 
     def __init__(self, input_size=config.INPUT_FEATURES, hidden_size=config.HIDDEN_SIZE, num_layers=config.NUM_LAYERS):
         super(TinyWakeWordModel, self).__init__()
 
-        # 1. Feature extraction with small-footprint 1D convolutions
+        # 1. Enhanced feature extraction with dual convolutional layers
         self.conv1 = nn.Conv1d(
             in_channels=input_size,
-            out_channels=16,
+            out_channels=24,  # Increased from 16
+            kernel_size=3,
+            stride=1,
+            padding=1
+        )
+        self.conv2 = nn.Conv1d(
+            in_channels=24,
+            out_channels=32,  # Added second conv layer
             kernel_size=3,
             stride=1,
             padding=1
         )
         self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
+        self.batch_norm1 = nn.BatchNorm1d(24)  # Added batch normalization
+        self.batch_norm2 = nn.BatchNorm1d(32)
 
-        # 2. Temporal processing with GRU (lighter than LSTM)
-        self.lstm = nn.GRU(
-            input_size=16,
-            hidden_size=hidden_size,
+        # 2. Improved temporal processing
+        self.gru = nn.GRU(
+            input_size=32,  # Increased to match conv output
+            hidden_size=hidden_size * 2,  # Doubled hidden size
             num_layers=num_layers,
             batch_first=True,
-            bidirectional=False,  # Unidirectional for efficiency
-            dropout=0.2 if num_layers > 1 else 0
+            bidirectional=False,  # Still unidirectional for efficiency
+            dropout=0.3 if num_layers > 1 else 0  # Slightly increased dropout
         )
 
-        # 3. Simplified attention mechanism
-        self.attention = nn.Linear(hidden_size, 1)
+        # 3. Multi-head attention mechanism (simplified version)
+        self.attention_heads = 2
+        self.attention = nn.Linear(hidden_size * 2, self.attention_heads)
 
-        # 4. Final classification layers with bottleneck
-        self.fc1 = nn.Linear(hidden_size, 8)
-        self.fc2 = nn.Linear(8, 1)
+        # 4. Enhanced classification with wider layers
+        self.fc1 = nn.Linear(hidden_size * 2, 32)  # Widened bottleneck
+        self.fc2 = nn.Linear(32, 16)  # Added intermediate layer
+        self.fc3 = nn.Linear(16, 1)  # Output layer
 
-        # Using efficient activations
+        # Using different activation functions
         self.relu = nn.ReLU()
+        self.leaky_relu = nn.LeakyReLU(0.1)
+        self.dropout = nn.Dropout(0.2)  # Added dropout between FC layers
 
     def forward(self, x):
         # Input shape: batch_size x time_steps x features
 
         # Transpose for 1D convolution (batch, channels, length)
-        x = x.transpose(1, 2)  # Shape becomes: batch_size x features x time_steps
+        x = x.transpose(1, 2)  # Shape: batch_size x features x time_steps
 
-        # Apply convolution and pooling
-        x = self.relu(self.conv1(x))  # Shape: batch_size x 16 x time_steps
-        x = self.pool(x)  # Shape: batch_size x 16 x (time_steps/2)
+        # Apply enhanced convolution blocks with batch norm
+        x = self.conv1(x)
+        x = self.batch_norm1(x)
+        x = self.relu(x)
 
-        # Transpose back for LSTM (batch, time_steps, channels)
-        x = x.transpose(1, 2)  # Shape: batch_size x (time_steps/2) x 16
+        x = self.conv2(x)
+        x = self.batch_norm2(x)
+        x = self.relu(x)
+        x = self.pool(x)  # Pooling after both convolutions
 
-        # Apply LSTM/GRU - returns all hidden states and final hidden state
-        lstm_out, _ = self.lstm(x)  # lstm_out shape: batch_size x (time_steps/2) x hidden_size
+        # Transpose back for GRU (batch, time_steps, channels)
+        x = x.transpose(1, 2)  # Shape: batch_size x (time_steps/2) x 32
 
-        # Apply simplified attention
-        # Calculate attention weights
-        attention_weights = torch.softmax(self.attention(lstm_out), dim=1)
+        # Apply GRU
+        gru_out, _ = self.gru(x)  # gru_out shape: batch_size x (time_steps/2) x (hidden_size*2)
 
-        # Create context vector as weighted sum of hidden states
-        context = torch.sum(attention_weights * lstm_out, dim=1)  # Shape: batch_size x hidden_size
+        # Apply multi-head attention
+        attention_weights = torch.softmax(self.attention(gru_out), dim=1)  # Shape: batch x time x heads
 
-        # Final classification
-        x = self.relu(self.fc1(context))  # Shape: batch_size x 8
-        x = self.fc2(x)  # Shape: batch_size x 1 (logits, not probabilities)
+        # Calculate context vectors (one per head)
+        contexts = []
+        for h in range(self.attention_heads):
+            head_weights = attention_weights[:, :, h].unsqueeze(2)  # batch x time x 1
+            context = torch.sum(head_weights * gru_out, dim=1)  # batch x hidden
+            contexts.append(context)
+
+        # Concatenate context vectors
+        context = torch.cat(contexts, dim=1) if self.attention_heads > 1 else contexts[0]
+
+        # If we have multiple heads, average them instead of concatenating to maintain dimension
+        if self.attention_heads > 1:
+            context = torch.mean(torch.stack(contexts), dim=0)
+
+        # Enhanced classification path
+        x = self.leaky_relu(self.fc1(context))  # Shape: batch_size x 32
+        x = self.dropout(x)
+        x = self.leaky_relu(self.fc2(x))  # Shape: batch_size x 16
+        x = self.fc3(x)  # Shape: batch_size x 1
 
         return x
 

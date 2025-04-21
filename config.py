@@ -6,8 +6,8 @@ Configuration settings for wake word detection system.
 SAMPLE_RATE = 16000  # 16kHz
 WINDOW_SIZE_MS = 500  # 500ms window
 HOP_LENGTH_MS = 100  # 100ms hop
-WINDOW_SIZE_SAMPLES = int(WINDOW_SIZE_MS * SAMPLE_RATE // 1000)
-HOP_LENGTH_SAMPLES = int(HOP_LENGTH_MS * SAMPLE_RATE // 1000)
+WINDOW_SIZE_SAMPLES = WINDOW_SIZE_MS * SAMPLE_RATE // 1000
+
 
 # Feature extraction settings
 INPUT_FEATURES = 13  # Number of MFCC features
@@ -31,5 +31,5 @@ WAKEWORD = " danke"
 CACHE_DIR = "wakeword_cache"
 CACHE_FILE = f"{CACHE_DIR}/wakeword_locations.json"
 
-NO_CACHE = True
-SAMPLES = 500
+NO_CACHE = False
+SAMPLES = None
