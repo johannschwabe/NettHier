@@ -3,5 +3,11 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (PythonProject)" />
   </component>
+  <component name="CMakePythonSetting">
+    <option name="pythonIntegrationState" value="YES" />
+  </component>
+  <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$/ESP_Servo">
+    <contentRoot DIR="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 virtualenv at ~/git/flash-attention/.venv" project-jdk-type="Python SDK" />
 </project>

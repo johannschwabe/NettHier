@@ -1,0 +1,12 @@
+build
+cmake-build-*/
+main/config_private.h
+.idea
+**/.venv
+ESP-Nett/recordings
+**.wav
+
+**/.DS_Store
+
+**.png
+**.npy
