@@ -164,20 +164,10 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="66733c89-c073-43c1-a682-70d5c2e132ec" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/PythonProject2.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/CMakeLists.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/main/CMakeLists.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/main/main.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/sdkconfig" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ESP_Servo/sdkconfig.old" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+    <list default="true" id="66733c89-c073-43c1-a682-70d5c2e132ec" name="Changes" comment="Starting ESP Servo constroll">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/idf_component.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/idf_component.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -1232,6 +1222,15 @@
       <workItem from="1745243092361" duration="25546000" />
       <workItem from="1746456008054" duration="127000" />
     </task>
+    <task id="LOCAL-00001" summary="Starting ESP Servo constroll">
+      <option name="closed" value="true" />
+      <created>1746458837871</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1746458837871</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1241,6 +1240,10 @@
     <isAutomaticCheckingOnLaunch value="false" />
     <isAutomaticFoundErrors value="true" />
     <isAutomaticReloadCMake value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Starting ESP Servo constroll" />
+    <option name="LAST_COMMIT_MESSAGE" value="Starting ESP Servo constroll" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PythonProject$record_custom_data.coverage" NAME="record_custom_data Coverage Results" MODIFIED="1745263976135" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

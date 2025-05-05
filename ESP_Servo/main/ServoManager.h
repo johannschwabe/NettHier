@@ -2,7 +2,7 @@
 #define SERVO_MANAGER_H
 
 #include "driver/gpio.h"
-#include "esp_driver_ledc.h"
+#include "driver/ledc.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"

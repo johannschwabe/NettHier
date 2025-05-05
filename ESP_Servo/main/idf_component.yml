@@ -16,4 +16,3 @@ dependencies:
   #   public: true
   espressif/esp-dsp: ^1.2.0
   espressif/esp-tflite-micro: '*'
-  espressif/esp_driver_ledc: '*'
