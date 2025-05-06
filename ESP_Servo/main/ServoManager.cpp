@@ -28,29 +28,13 @@ esp_err_t ServoManager::init() {
     
     // Ensure MOSFET is off initially
     gpio_set_level(_mosfetPin, 0);
-    
-    // Configure LEDC timer for servo PWM
-    _ledcTimer.speed_mode = _ledcSpeedMode;
-    _ledcTimer.timer_num = _ledcTimerNum;
-    _ledcTimer.duty_resolution = _ledcTimerResolution;
-    _ledcTimer.freq_hz = _pwmFreq;
-    _ledcTimer.clk_cfg = LEDC_AUTO_CLK;
-    
+
     ret = ledc_timer_config(&_ledcTimer);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to configure LEDC timer: %d", ret);
         return ret;
     }
-    
-    // Configure LEDC channel for servo PWM
-    _ledcChannel.speed_mode = _ledcSpeedMode;
-    _ledcChannel.channel = _ledcChannelNum;
-    _ledcChannel.timer_sel = _ledcTimerNum;
-    _ledcChannel.intr_type = LEDC_INTR_DISABLE;
-    _ledcChannel.gpio_num = _servoPin;
-    _ledcChannel.duty = 0;
-    _ledcChannel.hpoint = 0;
-    
+
     ret = ledc_channel_config(&_ledcChannel);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to configure LEDC channel: %d", ret);

@@ -33,20 +33,37 @@ private:
     // Hardware settings
     gpio_num_t _servoPin;
     gpio_num_t _mosfetPin;
+    const uint32_t _pwmFreq = 50;        // Standard servo frequency (Hz)
 
     // LEDC configuration
-    ledc_timer_config_t _ledcTimer;
-    ledc_channel_config_t _ledcChannel;
+    ledc_timer_config_t _ledcTimer = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .duty_resolution = LEDC_TIMER_14_BIT,
+        .timer_num = LEDC_TIMER_0,
+        .freq_hz = _pwmFreq,
+        .clk_cfg = LEDC_AUTO_CLK,
+        .deconfigure = false
+    };
+    ledc_channel_config_t _ledcChannel = {
+        .gpio_num = _servoPin,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = LEDC_CHANNEL_0,
+        .intr_type = LEDC_INTR_DISABLE,
+        .timer_sel = LEDC_TIMER_0,
+        .duty = 0,
+        .hpoint = 0,
+        .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+        .flags = {.output_invert = 0}
+    };
 
     // Servo specifications
     const uint32_t _minPulseUs = 500;    // Pulse width for 0 degrees (microseconds)
     const uint32_t _maxPulseUs = 2500;   // Pulse width for 180 degrees (microseconds)
-    const uint32_t _pwmFreq = 50;        // Standard servo frequency (Hz)
     const ledc_timer_bit_t _ledcTimerResolution = LEDC_TIMER_14_BIT; // PWM resolution bits
     const ledc_timer_t _ledcTimerNum = LEDC_TIMER_0;
     const ledc_channel_t _ledcChannelNum = LEDC_CHANNEL_0;
     const ledc_mode_t _ledcSpeedMode = LEDC_LOW_SPEED_MODE;
-    
+
     bool _initialized = false;
     bool _isPowered = false;
 };

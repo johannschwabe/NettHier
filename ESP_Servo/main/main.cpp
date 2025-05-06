@@ -8,7 +8,7 @@
 
 // Define pins for servo and MOSFET control
 #define SERVO_PIN GPIO_NUM_2    // Servo signal pin
-#define MOSFET_PIN GPIO_NUM_1   // MOSFET gate control pin
+#define MOSFET_PIN GPIO_NUM_3   // MOSFET gate control pin
 
 static const char* TAG = "Servo_App";
 
@@ -29,29 +29,12 @@ extern "C" void app_main(void) {
 
     // Main application loop
     while (1) {
-        // Method 1: Power management handled manually
-        ESP_LOGI(TAG, "Demonstrating manual power control");
-
-        // Power on, move to 0 degrees, wait, then power off
         servoManager.powerOn();
-        servoManager.setPosition(0);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        servoManager.setPosition(180);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        servoManager.setPosition(100);
+        vTaskDelay(pdMS_TO_TICKS(2000));
         servoManager.powerOff();
-
-        // Wait with power off to save energy
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        // Method 2: Using the convenience function
-        ESP_LOGI(TAG, "Demonstrating moveAndSleep functionality");
-
-        // Move to 90 degrees, hold for 1 second, then power off
-        servoManager.moveAndSleep(90, 1000);
-
-        // Wait with power off to save energy
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        // Move to 180 degrees, hold for 1 second, then power off
-        servoManager.moveAndSleep(180, 1000);
 
         // Longer wait before repeating the demo
         vTaskDelay(pdMS_TO_TICKS(5000));

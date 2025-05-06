@@ -172,9 +172,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="66733c89-c073-43c1-a682-70d5c2e132ec" name="Changes" comment="Starting ESP Servo constroll">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ESP_Servo/main/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -258,7 +258,7 @@
       <recent name="$PROJECT_DIR$/ESP_Servo" />
     </key>
   </component>
-  <component name="RunManager" selected="CMake Application.monitor">
+  <component name="RunManager" selected="CMake Application.flash">
     <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="CLION.EXTERNAL.BUILD" enabled="true" />
@@ -1233,7 +1233,7 @@
       <workItem from="1745243092361" duration="25546000" />
       <workItem from="1746456008054" duration="127000" />
       <workItem from="1746553401573" duration="3348000" />
-      <workItem from="1746558859387" duration="2468000" />
+      <workItem from="1746558859387" duration="8874000" />
     </task>
     <task id="LOCAL-00001" summary="Starting ESP Servo constroll">
       <option name="closed" value="true" />
