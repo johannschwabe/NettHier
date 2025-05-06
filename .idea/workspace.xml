@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="BackendCodeEditorMiscSettings">
-    <option name="/Default/Environment/Hierarchy/GeneratedFilesCacheKey/Timestamp/@EntryValue" value="12" type="long" />
+    <option name="/Default/Environment/Hierarchy/GeneratedFilesCacheKey/Timestamp/@EntryValue" value="18" type="long" />
+    <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
   </component>
-  <component name="CMakePresetLoader"><![CDATA[{
-  "useNewFormat": true
-}]]></component>
+  <component name="CMakePresetLoader">{
+  &quot;useNewFormat&quot;: true
+}</component>
   <component name="CMakeProjectFlavorService">
     <option name="flavorId" value="CMakePlainProjectFlavor" />
   </component>
@@ -27,8 +28,8 @@
       <config projectName="myProject" targetName="__idf_efuse" />
       <config projectName="myProject" targetName="__idf_esp_bootloader_format" />
       <config projectName="myProject" targetName="__idf_esp_event" />
-      <config projectName="myProject" targetName="__idf_esp_driver_usb_serial_jtag" />
       <config projectName="myProject" targetName="__idf_esp_driver_sdm" />
+      <config projectName="myProject" targetName="__idf_esp_driver_usb_serial_jtag" />
       <config projectName="myProject" targetName="partition_table_bin" />
       <config projectName="myProject" targetName="partition-table-flash" />
       <config projectName="myProject" targetName="__idf_espressif__esp-tflite-micro" />
@@ -42,8 +43,8 @@
       <config projectName="myProject" targetName="partition-table" />
       <config projectName="myProject" targetName="__idf_usb" />
       <config projectName="myProject" targetName="show_efuse_table" />
-      <config projectName="myProject" targetName="encrypted-partition-table-flash" />
       <config projectName="myProject" targetName="__idf_soc" />
+      <config projectName="myProject" targetName="encrypted-partition-table-flash" />
       <config projectName="myProject" targetName="__idf_protocomm" />
       <config projectName="myProject" targetName="__idf_mbedtls" />
       <config projectName="myProject" targetName="__idf_hal" />
@@ -57,8 +58,8 @@
       <config projectName="myProject" targetName="__idf_esp_driver_uart" />
       <config projectName="myProject" targetName="partition_table" />
       <config projectName="myProject" targetName="__idf_esp_system" />
-      <config projectName="myProject" targetName="__idf_sdmmc" />
       <config projectName="myProject" targetName="efuse-custom-table" />
+      <config projectName="myProject" targetName="__idf_sdmmc" />
       <config projectName="myProject" targetName="__idf_esp_driver_pcnt" />
       <config projectName="myProject" targetName="efuse-common-table" />
       <config projectName="myProject" targetName="__idf_unity" />
@@ -77,28 +78,28 @@
       <config projectName="myProject" targetName="uf2" />
       <config projectName="myProject" targetName="__idf_esp_vfs_console" />
       <config projectName="myProject" targetName="__idf_xtensa" />
+      <config projectName="myProject" targetName="bootloader-flash" />
       <config projectName="myProject" targetName="__idf_app_update" />
       <config projectName="myProject" targetName="__idf_esp_ringbuf" />
-      <config projectName="myProject" targetName="bootloader-flash" />
       <config projectName="myProject" targetName="gen_project_binary" />
       <config projectName="myProject" targetName="app_check_size" />
-      <config projectName="myProject" targetName="__idf_tcp_transport" />
       <config projectName="myProject" targetName="__idf_esp_app_format" />
+      <config projectName="myProject" targetName="__idf_tcp_transport" />
       <config projectName="myProject" targetName="memory.ld" />
       <config projectName="myProject" targetName="__idf_esp_driver_cam" />
       <config projectName="myProject" targetName="show-efuse-table" />
       <config projectName="myProject" targetName="__idf_protobuf-c" />
-      <config projectName="myProject" targetName="__idf_nvs_sec_provider" />
-      <config projectName="myProject" targetName="__idf_esp_eth" />
       <config projectName="myProject" targetName="monitor" />
+      <config projectName="myProject" targetName="__idf_esp_eth" />
+      <config projectName="myProject" targetName="__idf_nvs_sec_provider" />
       <config projectName="myProject" targetName="__idf_esp_gdbstub" />
       <config projectName="myProject" targetName="p256m" />
       <config projectName="myProject" targetName="__idf_wpa_supplicant" />
       <config projectName="myProject" targetName="__idf_newlib" />
       <config projectName="myProject" targetName="__idf_esp_phy" />
-      <config projectName="myProject" targetName="__idf_espressif__esp-nn" />
-      <config projectName="myProject" targetName="__idf_esp_hid" />
       <config projectName="myProject" targetName="everest" />
+      <config projectName="myProject" targetName="__idf_esp_hid" />
+      <config projectName="myProject" targetName="__idf_espressif__esp-nn" />
       <config projectName="myProject" targetName="dfu-flash" />
       <config projectName="myProject" targetName="__idf_esp_http_client" />
       <config projectName="myProject" targetName="app-flash" />
@@ -114,20 +115,20 @@
       <config projectName="myProject" targetName="__idf_esp_security" />
       <config projectName="myProject" targetName="__idf_mqtt" />
       <config projectName="myProject" targetName="confserver" />
-      <config projectName="myProject" targetName="__idf_perfmon" />
       <config projectName="myProject" targetName="__idf_http_parser" />
+      <config projectName="myProject" targetName="__idf_perfmon" />
       <config projectName="myProject" targetName="efuse_custom_table" />
       <config projectName="myProject" targetName="__idf_esp_driver_mcpwm" />
       <config projectName="myProject" targetName="size-components" />
       <config projectName="myProject" targetName="__idf_fatfs" />
-      <config projectName="myProject" targetName="size-files" />
       <config projectName="myProject" targetName="__idf_cxx" />
       <config projectName="myProject" targetName="save-defconfig" />
+      <config projectName="myProject" targetName="size-files" />
       <config projectName="myProject" targetName="__idf_espcoredump" />
       <config projectName="myProject" targetName="__idf_rt" />
       <config projectName="myProject" targetName="efuse_test_table" />
-      <config projectName="myProject" targetName="__idf_espressif__esp-dsp" />
       <config projectName="myProject" targetName="__idf_esp_rom" />
+      <config projectName="myProject" targetName="__idf_espressif__esp-dsp" />
       <config projectName="myProject" targetName="__idf_freertos" />
       <config projectName="myProject" targetName="__idf_wifi_provisioning" />
       <config projectName="myProject" targetName="__idf_esp_hw_support" />
@@ -137,8 +138,8 @@
       <config projectName="myProject" targetName="__idf_esp_driver_spi" />
       <config projectName="myProject" targetName="__idf_vfs" />
       <config projectName="myProject" targetName="_project_elf_src" />
-      <config projectName="myProject" targetName="__idf_lwip" />
       <config projectName="myProject" targetName="__idf_esp_mm" />
+      <config projectName="myProject" targetName="__idf_lwip" />
       <config projectName="myProject" targetName="uf2-app" />
       <config projectName="myProject" targetName="__idf_heap" />
       <config projectName="myProject" targetName="__idf_esp_driver_i2s" />
@@ -160,14 +161,21 @@
   </component>
   <component name="CMakeSettings">
     <configurations>
-      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="ESPPORT" value="/dev/ttyACM0" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="66733c89-c073-43c1-a682-70d5c2e132ec" name="Changes" comment="Starting ESP Servo constroll">
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/idf_component.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/idf_component.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/ServoManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ESP_Servo/main/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ESP_Servo/main/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -189,8 +197,9 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/ESP_Servo/main/Servo.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/ESP_Servo/main/Servo.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/ESP_Servo/main/ServoManager.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/ESP_Servo/main/ServoManager.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/ESP_Servo/main/main.cpp" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectApplicationVersion">
     <option name="ide" value="CLion" />
@@ -209,6 +218,8 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
+    "CMake Application.flash.executor": "Run",
+    "CMake Application.monitor.executor": "Run",
     "CMake Debug.NettHier.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "Python.dataloader.executor": "Run",
@@ -234,7 +245,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "CPPToolchains",
+    "settings.editor.selected.configurable": "CMakeSettings",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -247,7 +258,7 @@
       <recent name="$PROJECT_DIR$/ESP_Servo" />
     </key>
   </component>
-  <component name="RunManager" selected="CMake Application.app">
+  <component name="RunManager" selected="CMake Application.monitor">
     <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="CLION.EXTERNAL.BUILD" enabled="true" />
@@ -821,7 +832,7 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="flash" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="myProject" TARGET_NAME="flash" CONFIG_NAME="Debug">
+    <configuration name="flash" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="myProject" TARGET_NAME="flash" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="myProject" RUN_TARGET_NAME="myProject.elf">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -866,7 +877,7 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="monitor" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="myProject" TARGET_NAME="monitor" CONFIG_NAME="Debug">
+    <configuration name="monitor" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="myProject" TARGET_NAME="monitor" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="myProject" RUN_TARGET_NAME="myProject.elf">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -1221,6 +1232,8 @@
       <workItem from="1745229152487" duration="12994000" />
       <workItem from="1745243092361" duration="25546000" />
       <workItem from="1746456008054" duration="127000" />
+      <workItem from="1746553401573" duration="3348000" />
+      <workItem from="1746558859387" duration="2468000" />
     </task>
     <task id="LOCAL-00001" summary="Starting ESP Servo constroll">
       <option name="closed" value="true" />

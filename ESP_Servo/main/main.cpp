@@ -7,8 +7,8 @@
 #include "ServoManager.h"
 
 // Define pins for servo and MOSFET control
-#define SERVO_PIN GPIO_NUM_18    // Servo signal pin
-#define MOSFET_PIN GPIO_NUM_19   // MOSFET gate control pin
+#define SERVO_PIN GPIO_NUM_2    // Servo signal pin
+#define MOSFET_PIN GPIO_NUM_1   // MOSFET gate control pin
 
 static const char* TAG = "Servo_App";
 
