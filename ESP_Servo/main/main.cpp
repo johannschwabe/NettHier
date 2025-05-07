@@ -26,14 +26,19 @@ extern "C" void app_main(void) {
     // Create and initialize the servo manager
     ServoManager servoManager(SERVO_PIN, MOSFET_PIN);
     ESP_ERROR_CHECK(servoManager.init());
-
+    int wait = 10;
     // Main application loop
     while (1) {
         servoManager.powerOn();
-        servoManager.setPosition(180);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        servoManager.setPosition(100);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        int pos = 0;
+        while (1)
+        {
+            servoManager.setPosition(pos);
+            vTaskDelay(pdMS_TO_TICKS(wait));
+            pos += 1;
+            if (pos >= 180) break;
+
+        }
         servoManager.powerOff();
 
         // Longer wait before repeating the demo
